@@ -99,6 +99,13 @@ function draw() {
     sphere(sphereScale);
     pop();
     let d = int(dist(f3dChain[i-1].x, f3dChain[i-1].y, f3dChain[i].x, f3dChain[i].y));
+    //calcolo numero parti
+    let parts;
+    if(d>(shereScale/2)){
+      parts = d/(sphereScale/2);
+    }
+    //calcolo parte da aggiungere o sotrarre alle coordinare di partenza
+    //renderizzo sfere fitt
     push();
     translate(f3dChain[i]);
     fill(237, 237, 237);
