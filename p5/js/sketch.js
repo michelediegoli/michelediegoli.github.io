@@ -83,7 +83,7 @@ function draw() {
   
   if (mouseIsPressed) {
     if (mouseButton === LEFT) {
-      f3dCahin.push(intersect)
+      f3dChain.push(intersect)
     }
   }
   
