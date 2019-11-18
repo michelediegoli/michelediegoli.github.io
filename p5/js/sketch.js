@@ -1,5 +1,6 @@
 const objects = [];
 let eyeZ;
+var f3dChain = [];
 
 function setup() {
   createCanvas(710, 400, WEBGL);
@@ -79,6 +80,20 @@ function draw() {
   fill(237, 34, 93);
   sphere(10);
   pop();
+  
+  if (mouseIsPressed) {
+    if (mouseButton === LEFT) {
+      f3dCahin.push(intersect)
+    }
+  }
+  
+  for(let i = 0,l=f3dChain.length;i<l;i++){
+    push();
+    translate(f3dChain[i]);
+    fill(237, 237, 237);
+    sphere(10);
+    pop();
+  }
 }
 
 // Class for a plane that extends to infinity.
