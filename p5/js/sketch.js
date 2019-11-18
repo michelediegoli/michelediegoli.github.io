@@ -1,6 +1,7 @@
 const objects = [];
 let eyeZ;
 var f3dChain = [];
+var sphereScale = 50;
 
 function setup() {
   createCanvas(710, 400, WEBGL);
@@ -78,7 +79,7 @@ function draw() {
   push();
   translate(intersect);
   fill(237, 34, 93);
-  sphere(10);
+  sphere(sphereScale);
   pop();
   
   if (mouseIsPressed) {
@@ -91,7 +92,7 @@ function draw() {
     push();
     translate(f3dChain[i]);
     fill(237, 237, 237);
-    sphere(10);
+    sphere(sphereScale);
     pop();
   }
 }
