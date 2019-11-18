@@ -88,7 +88,13 @@ function draw() {
     }
   }
   
-  for(let i = 0,l=f3dChain.length;i<l;i++){
+  for(let i = 1,l=f3dChain.length;i<l;i++){
+    push();
+    translate(f3dChain[i-1]);
+    fill(237, 237, 237);
+    sphere(sphereScale);
+    pop();
+    let d = int(dist(f3dChain[i-1].x, f3dChain[i-1].y, f3dChain[i].x, f3dChain[i].y));
     push();
     translate(f3dChain[i]);
     fill(237, 237, 237);
