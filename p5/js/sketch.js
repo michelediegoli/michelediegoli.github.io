@@ -92,25 +92,40 @@ function draw() {
     }
   }
   
-  for(let i = 1,l=f3dChain.length;i<l;i++){
-    push();
-    translate(f3dChain[i-1]);
-    fill(237, 237, 237);
-    sphere(sphereScale);
-    pop();
-    let d = int(dist(f3dChain[i-1].x, f3dChain[i-1].y, f3dChain[i].x, f3dChain[i].y));
-    //calcolo numero parti
-    let parts;
-    if(d>(shereScale/2)){
-      parts = d/(sphereScale/2);
-    }
-    //calcolo parte da aggiungere o sotrarre alle coordinare di partenza
-    //renderizzo sfere fitt
+  for(let i = 0,l=f3dChain.length;i<l;i++){
     push();
     translate(f3dChain[i]);
     fill(237, 237, 237);
     sphere(sphereScale);
     pop();
+    if(i>0){
+      let d = int(dist(f3dChain[i-1].x, f3dChain[i-1].y, f3dChain[i].x, f3dChain[i].y));
+      //calcolo numero parti
+      let parts;
+      if(d>(sphereScale/2)){
+        //sposto ogni sfera alla distanza di mezzo raggio uno dall'altra
+        parts = Math.floor(d/(sphereScale/2));
+        var dx = f3dChain[i-1].x - f3dChain[i].x;
+        var dy = f3dChain[i-1].y - f3dChain[i].y;
+        var pdx = Math.floor(dx / parts);
+        var pdy = Math.floor(dy / parts);
+        var xbkp = f3dChain[i].x;
+        var ybkp = f3dChain[i].y;
+        for(let s = 0;s<parts;s++){
+          xbkp += pdx;
+          ybkp += pdy;
+          push();
+          translate({x:xbkp,y:ybkp,z:0});
+          fill(237, 237, 237);
+          sphere(sphereScale);
+          pop();
+        }
+      }
+      //calcolo parte da aggiungere o sotrarre alle coordinare di partenza
+      //renderizzo sfere fitt
+      
+    }
+    
   }
 }
 
