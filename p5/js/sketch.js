@@ -6,10 +6,10 @@ function setup() {
 
   eyeZ = height / 2 / tan((30 * PI) / 180); // The default distance the camera is away from the origin.
 
-  objects.push(new IntersectPlane(1, 0, 0, -100, 0, 0)); // Left wall
-  objects.push(new IntersectPlane(1, 0, 0, 100, 0, 0)); // Right wall
-  objects.push(new IntersectPlane(0, 1, 0, 0, -100, 0)); // Bottom wall
-  objects.push(new IntersectPlane(0, 1, 0, 0, 100, 0)); // Top wall
+  //objects.push(new IntersectPlane(1, 0, 0, -100, 0, 0)); // Left wall
+  //objects.push(new IntersectPlane(1, 0, 0, 100, 0, 0)); // Right wall
+  //objects.push(new IntersectPlane(0, 1, 0, 0, -100, 0)); // Bottom wall
+  //objects.push(new IntersectPlane(0, 1, 0, 0, 100, 0)); // Top wall
   objects.push(new IntersectPlane(0, 0, 1, 0, 0, 0)); // Back wall
 
   noStroke();
@@ -22,7 +22,7 @@ function draw() {
   // Lights
   pointLight(255, 255, 255, 0, 0, 400);
   ambientLight(244, 122, 158);
-
+/*
   // Left wall
   push();
   translate(-100, 0, 200);
@@ -52,7 +52,7 @@ function draw() {
   pop();
 
   plane(200, 200); // Back wall
-
+*/
   const x = mouseX - width / 2;
   const y = mouseY - height / 2;
 
