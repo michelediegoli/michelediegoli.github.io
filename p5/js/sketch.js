@@ -2,6 +2,7 @@ const objects = [];
 let eyeZ;
 var f3dChain = [];
 var sphereScale = 50;
+var singleClick = false;
 
 function setup() {
   createCanvas(710, 400, WEBGL);
@@ -84,7 +85,10 @@ function draw() {
   
   if (mouseIsPressed) {
     if (mouseButton === LEFT) {
-      f3dChain.push(intersect)
+      if(!singleClick){
+        f3dChain.push(intersect)
+        singleClick = true;
+      }
     }
   }
   
@@ -114,4 +118,8 @@ class IntersectPlane {
   getLambda(Q, v) {
     return (-this.d - this.normal.dot(Q)) / this.normal.dot(v);
   }
+}
+
+function mouseReleased() {
+    singleClick = false;
 }
