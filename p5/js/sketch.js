@@ -116,7 +116,7 @@ function draw() {
           ybkp += pdy;
           push();
           translate(createVector(xbkp,ybkp));
-          fill(237, 237, 237);
+          fill(37, 37, 37);
           sphere(sphereScale);
           pop();
         }
