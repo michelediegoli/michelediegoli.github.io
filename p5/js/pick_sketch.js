@@ -4,6 +4,15 @@ var f3dChain = [];
 var sphereScale = 50;
 var singleClick = false;
 
+const BOX1=101;
+const CONE1=102;
+const PLANE1=103;
+const SPHERE1=104;
+const TORUS1=105;
+
+const CLICKBOX=128;
+const CLICKPLANE=129;
+
 function setup() {
   mCreateCanvas(710, 400, WEBGL);
 
@@ -80,6 +89,27 @@ function draw() {
   mSphere(sphereScale);
   mPop();
   
+  switch(objectAtMouse()) {
+      case BOX1:  // Spawn a set of boxes when clicked
+          for(var i=0; i<10; i++) {
+              mPush();
+              mTranslate(0,0,(i-5)*50);
+              mRotateZ(frameCount * 0.01);
+              mTexture(puppy);
+              mBox(CLICKBOX, 30);
+              mPop();
+          }
+          break;
+      case PLANE1:  // Change the texture image when clicked
+          mPush();
+          mTranslate(150,150,150);
+          mRotateX(frameCount * 0.02);
+          mTexture(puppy);
+          mPlane(CLICKPLANE, 100);
+          mPop();
+          break;
+  }
+
   if (mouseIsPressed) {
     if (mouseButton === LEFT) {
       if(!singleClick){
