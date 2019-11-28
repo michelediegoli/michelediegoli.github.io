@@ -7,8 +7,8 @@ var singleClick = false;
 const BOX1=101;
 const CONE1=102;
 const PLANE1=103;
-const SPHERE1=104;
-const TORUS1=105;
+const SPHERE=104;
+const INTERP=105;
 
 const CLICKBOX=128;
 const CLICKPLANE=129;
@@ -30,7 +30,10 @@ function setup() {
 
 function draw() {
   mBackground(0);
-
+  mResetMatrix(); // Always include mResetMatrix to ensure proper operation of the object picker.
+    
+  //mCamera(0,0,100);
+    
   // Lights
   pointLight(255, 255, 255, 0, 0, 400);
   ambientLight(244, 122, 158);
@@ -83,30 +86,20 @@ function draw() {
   }
 
   // Cursor
-  mPush();
-  mTranslate(intersect);
+  push();
+  translate(intersect);
   fill(237, 34, 93);
-  mSphere(sphereScale);
-  mPop();
+  sphere(sphereScale);
+  pop();
   
   switch(objectAtMouse()) {
-      case BOX1:  // Spawn a set of boxes when clicked
-          for(var i=0; i<10; i++) {
-              mPush();
-              mTranslate(0,0,(i-5)*50);
-              mRotateZ(frameCount * 0.01);
-              mTexture(puppy);
-              mBox(CLICKBOX, 30);
-              mPop();
-          }
+      case SPHERE:  // Spawn a set of boxes when clicked
+          fill(255);
+          text('SPHERE', 10, 10, 70, 80); // Text wraps within text box
           break;
-      case PLANE1:  // Change the texture image when clicked
-          mPush();
-          mTranslate(150,150,150);
-          mRotateX(frameCount * 0.02);
-          mTexture(puppy);
-          mPlane(CLICKPLANE, 100);
-          mPop();
+      case INTERP:  // Change the texture image when clicked
+          fill(255);
+          text('INTERP', 10, 10, 70, 80); // Text wraps within text box
           break;
   }
 
@@ -123,7 +116,7 @@ function draw() {
     mPush();
     mTranslate(f3dChain[i]);
     fill(237, 237, 237);
-    mSphere(sphereScale);
+    mSphere(SPHERE,sphereScale);
     mPop();
     if(i>0){
       let d = int(dist(f3dChain[i-1].x, f3dChain[i-1].y, f3dChain[i].x, f3dChain[i].y));
@@ -144,7 +137,7 @@ function draw() {
           mPush();
           mTranslate(createVector(xbkp,ybkp));
           fill(37, 37, 37);
-          mSphere(sphereScale);
+          mSphere(INTERP,sphereScale);
           mPop();
         }
       }
