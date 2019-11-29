@@ -16,7 +16,7 @@ const CLICKPLANE=129;
 function setup() {
   mCreateCanvas(710, 400, WEBGL);
 
-  eyeZ = (height / 2 / tan((30 * PI) / 180))*2; // The default distance the camera is away from the origin.
+  eyeZ = (height / 2 / tan((30 * PI) / 180))*10; // The default distance the camera is away from the origin.
 
   //objects.push(new IntersectPlane(1, 0, 0, -100, 0, 0)); // Left wall
   //objects.push(new IntersectPlane(1, 0, 0, 100, 0, 0)); // Right wall
