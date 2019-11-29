@@ -32,7 +32,7 @@ function draw() {
   mBackground(0);
   mResetMatrix(); // Always include mResetMatrix to ensure proper operation of the object picker.
     
-  //mCamera(0,0,100);
+  mCamera(0,0,-10);
     
   // Lights
   pointLight(255, 255, 255, 0, 0, 400);
