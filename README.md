@@ -1,3 +1,9 @@
-npm install
+F3dwebgl -> electron-f3d-threejs
 
-npm run make ...and you'll find the exe in out\make\squirrel.windows\x64 (only windows 64bit arch!)
+1. Download source
+
+2. npm install
+
+3. npm run make 
+
+...and you'll find the exe in out\make\squirrel.windows\x64 (only windows 64bit arch!)
