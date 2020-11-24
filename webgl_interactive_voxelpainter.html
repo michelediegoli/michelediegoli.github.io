@@ -27,7 +27,7 @@
 
 			//import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r122/three.min.js';
 			import { OrbitControls } from './Utils/js/mod/OrbitControls.js';	
-			let camera, scene, renderer;
+			let camera, scene, renderer, controls;
 			let plane;
 			let mouse, raycaster, isShiftDown = false;
 
@@ -44,7 +44,7 @@
 				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
 				camera.position.set( 0, 0, 1300 );
 				camera.lookAt( 0, 0, 0 );
-
+				
 				scene = new THREE.Scene();
 				scene.background = new THREE.Color( 0xf0f0f0 );
 
@@ -92,6 +92,8 @@
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				document.body.appendChild( renderer.domElement );
 
+				controls = new OrbitControls( camera, renderer.domElement );
+				
 				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 				document.addEventListener( 'mousedown', onDocumentMouseDown, false );
 				document.addEventListener( 'keydown', onDocumentKeyDown, false );
