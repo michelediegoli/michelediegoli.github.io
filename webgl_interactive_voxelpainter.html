@@ -33,6 +33,8 @@
 
 			let rollOverMesh, rollOverMaterial;
 			let cubeGeo, cubeMaterial;
+			
+			let geometry, MAX_POINTS, positions, material, line;
 
 			const objects = [];
 
@@ -95,16 +97,30 @@
 				controls = new OrbitControls( camera, renderer.domElement );
 				controls.enabled = false;
 
-				
 				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 				document.addEventListener( 'mousedown', onDocumentMouseDown, false );
 				document.addEventListener( 'keydown', onDocumentKeyDown, false );
 				document.addEventListener( 'keyup', onDocumentKeyUp, false );
-
 				//
 
 				window.addEventListener( 'resize', onWindowResize, false );
 
+				geometry = new THREE.BufferGeometry();
+				MAX_POINTS = 500;
+				// attributes
+				positions = new Float32Array( MAX_POINTS * 3 ); // 3 vertices per point
+				geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
+
+				// drawcalls
+				let drawCount = 2; // draw the first 2 points, only
+				geometry.setDrawRange( 0, drawCount );
+
+				// material
+				material = new THREE.LineBasicMaterial( { color: 0xff0000, linewidth: 2 } );
+
+				// line
+				line = new THREE.Line( geometry,  material );
+				scene.add( line );
 			}
 
 			function onWindowResize() {
