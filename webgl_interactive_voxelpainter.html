@@ -34,7 +34,7 @@
 			let rollOverMesh, rollOverMaterial;
 			let cubeGeo, cubeMaterial;
 			
-			let geometry, MAX_POINTS, positions, material, line, f3dStroke = [];
+			let geometry, BufferGeometry, MAX_POINTS, positions, material, line, f3dStroke = [];
 
 			const objects = [];
 
@@ -72,7 +72,7 @@
 				raycaster = new THREE.Raycaster();
 				mouse = new THREE.Vector2();
 
-				const geometry = new THREE.PlaneBufferGeometry( 1000, 1000 );
+				geometry = new THREE.PlaneBufferGeometry( 1000, 1000 );
 				
 
 				plane = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { visible: false } ) );
@@ -105,21 +105,21 @@
 
 				window.addEventListener( 'resize', onWindowResize, false );
 
-				geometry = new THREE.BufferGeometry();
+				BufferGeometry = new THREE.BufferGeometry();
 				MAX_POINTS = 500;
 				// attributes
 				positions = new Float32Array( MAX_POINTS * 3 ); // 3 vertices per point
-				geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
+				BufferGeometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
 
 				// drawcalls
 				let drawCount = 2; // draw the first 2 points, only
-				geometry.setDrawRange( 0, drawCount );
+				BufferGeometry.setDrawRange( 0, drawCount );
 
 				// material
 				material = new THREE.LineBasicMaterial( { color: 0xff0000, linewidth: 2 } );
 
 				// line
-				line = new THREE.Line( geometry,  material );
+				line = new THREE.Line( BufferGeometry,  material );
 				scene.add( line );
 			}
 
