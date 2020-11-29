@@ -9,3 +9,9 @@ F3dwebgl -> electron-f3d-threejs
 3. npm run make 
 
 ...and you'll find the exe in out\make\squirrel.windows\x64 (only windows 64bit arch!)
+
+ToDo:
+
+splash
+
+https://stackoverflow.com/questions/39126429/electron-splashscreen-on-startup-application
