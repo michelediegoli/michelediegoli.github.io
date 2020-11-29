@@ -45,6 +45,7 @@
 			let geometry, BufferGeometry, MAX_POINTS = 500, SPHERESCALE = 1, positions, material, line, f3dStroke = [],lastSphere = {};
 			let startFreeHandDrawScale = 10, endFreeHandDrawScale = 0.1;
 			let spheresNumber = 0, chainsNumber = 0, bodyNumber = 0, f3dWorld = {}, oldX, oldY, boxHelper, select, group, interpolate_group, ch_group, indexPickedObject, indexPickedBody, indexPickedChain, distanceFactor = 10;
+			let intersect = {}, intersectedObject = {}, intersectedObjectOld = {};
 			//todo: change to array
 			f3dWorld[+bodyNumber] = {};
 			f3dWorld[+bodyNumber][+chainsNumber] = {};
@@ -113,9 +114,9 @@
 				//controls.enabled = false;
 
 				//draw events
-				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
-				document.addEventListener( 'mousedown', onDocumentMouseDown, false );
-				document.addEventListener( 'mouseup', onDocumentMouseUp, false );
+				document.addEventListener( 'mousemove', toOverrideMouseMove, false );
+				document.addEventListener( 'mousedown', toOverrideMouseDown, false );
+				document.addEventListener( 'mouseup', toOverrideMouseUp, false );
 				document.addEventListener( 'keydown', onDocumentKeyDown, false );
 				document.addEventListener( 'keyup', onDocumentKeyUp, false );
 				//
@@ -147,10 +148,72 @@
 				scene.add(ch_group);
 				
 			}
-
+			
 			document.DrawCB = function(){
-				document.addEventListener( 'mousedown', onDrawMouseDown, false );
-				document.addEventListener( 'mouseup', onDrawMouseUp, false );
+				onDocumentMouseDown = onDrawMouseDown;
+				onDocumentMouseUp = onDrawMouseUp;
+				intersect_fn = draw_intersect_fn;
+			}
+			
+			function mouseCoordinatesHadler(e){
+
+				e.preventDefault();
+
+				mouse.set( ( e.clientX / window.innerWidth ) * 2 - 1, - ( e.clientY / window.innerHeight ) * 2 + 1 );
+				
+			}
+
+			function default_intersect_fn(x,y){
+				return [];
+			}
+
+			function intersect_fn(x,y){
+				return [];
+			}
+
+			function draw_intersect_fn(){
+				//mouse.set( ( x / window.innerWidth ) * 2 - 1, - ( y / window.innerHeight ) * 2 + 1 );
+				raycaster.setFromCamera( mouse, camera );
+				intersectedObject = raycaster.intersectObjects( scene.children, true );
+				if ( intersectedObject.length > 0 ) {
+					//'material' in this.intersectedObjectOld
+					if ( intersectedObjectOld.hasOwnProperty('material') && (intersectedObjectOld != intersectedObject[ 0 ].object) ) {
+
+						if ( intersectedObjectOld.material ) intersectedObjectOld.material.color.setHex( intersectedObjectOld.currentHex );
+
+						intersectedObjectOld = intersectedObject[ 0 ].object;
+						
+						if(intersectedObjectOld.name.indexOf('f3d_sphere_') !== -1){
+							//this.controls.enabled = false;
+							let sphereTokens = intersectedObjectOld.name.split('_');
+							let index_f3d_sphere = parseInt(sphereTokens[2]);
+							let index_body = parseInt(sphereTokens[3]);
+							let index_chain = parseInt(sphereTokens[4]);
+							indexPickedObject = index_f3d_sphere;
+							indexPickedBody = index_body;
+							indexPickedChain = index_chain;
+							startFreeHandDrawScale = intersectedObjectOld.scale.x;
+							setSelect(true);
+						}else if(intersectedObjectOld.name.indexOf('wp') !== -1){
+							intersect = intersectedObjectOld;
+							setSelect(false);
+						}
+						intersectedObjectOld.currentHex = intersectedObjectOld.material.color.getHex();
+						intersectedObjectOld.material.color.setHex( 0xffffff );
+
+					}else{
+						intersectedObjectOld = intersectedObject[ 0 ].object;
+					}
+
+					return intersectedObject;
+				} else {
+
+					if ( intersectedObjectOld.hasOwnProperty('material') ) intersectedObjectOld.material.color.setHex( intersectedObjectOld.currentHex );
+
+					intersectedObjectOld = null;
+					return [];
+
+				}
 			}
 
 
@@ -175,16 +238,16 @@
 					positions[ index ++ ] = f3dStroke[i].y;
 					positions[ index ++ ] = f3dStroke[i].z;
 
-
+					
 				}
 			}
-		
+			
 			function resetPosition(){
-
+				
 				line.geometry.setDrawRange( 0, 0 );
-
+				
 			}
-
+			
 			function createSphere(color,scale){
 				var geometry = new THREE.SphereGeometry( 5, 8, 8 );
 				var material = new THREE.MeshLambertMaterial( {color: color} );
@@ -215,11 +278,8 @@
 					ring = {back:null,head:[],sphere:voxel};
 					f3dWorld[+bodyNumber][+chainsNumber][+(spheresNumber-1)] = ring;
 				}else{
-					//me.f3dWorld[me.indexPickedBody][me.indexPickedChain][+(me.indexPickedObject)].sphere.position.copy( intersects[i].point );
 					ring = {back:indexPickedObject,head:[],sphere:voxel};
-					//my ring
 					f3dWorld[+indexPickedBody][+indexPickedChain][+(spheresNumber-1)] = ring;
-					//update selected sphere
 					if(f3dWorld[+indexPickedBody][+indexPickedChain][+(indexPickedObject)].head.length == 0) f3dWorld[+indexPickedBody][+indexPickedChain][+(indexPickedObject)].head = [spheresNumber-1];
 					else f3dWorld[+indexPickedBody][+indexPickedChain][+(indexPickedObject)].head.push(spheresNumber-1);
 				}	
@@ -247,29 +307,11 @@
 						for(let s = 0,s_l = Object.keys(f3dWorld[+b][+c]).length;s<s_l;s++){
 							let st = f3dWorld[+b][+c][+s];
 							if(st.head && st.head.length>0){
-								//if(this.lineCurve){
 								let s1 = st.sphere;
 								for(let h = 0,h_l = st.head.length;h<h_l;h++){
 									let s2 = f3dWorld[+b][+c][+st.head[h]].sphere;
 									r_interpolate2Spheres(s1,s2,s,st.head[h]);
-									//if(!this.hideConvexHull) this.convexHullBetween2Spheres(s1,s2,s,st.head[h]);
 								}
-								/*
-								}else{
-									if(!this.curvePoints && curvePoints.length == 0){
-										curvePoints.push( st.sphere.position );
-										curveScales.push( st.sphere.scale );
-									} 
-									for(let h = 0,h_l = st.head.length;h<h_l;h++){
-										curvePoints.push( this.f3dWorld[+b][+c][+st.head[h]].sphere.position );
-										curveScales.push( this.f3dWorld[+b][+c][+st.head[h]].sphere.scale )
-										//this.r_interpolate2Spheres(s1,s2,s,st.head[h]);
-										//if(!this.hideConvexHull) this.convexHullBetween2Spheres(s1,s2,s,st.head[h]);
-									}
-									if(s == (s_l-2)) this.createCurve(curvePoints,curveScales)
-
-								}
-								*/
 							}
 						}
 					}
@@ -308,44 +350,57 @@
 					
 				}
 			}
+			//wrap function to override dinamically onDocumentMouseMove
+			function toOverrideMouseMove( event ){
+				onDocumentMouseMove( event );
+			}
 
+			function onDefaultMouseMove( event ) {
+				
+				mouseCoordinatesHadler( event );
+
+				const intersects = intersect_fn( );
+			}
 
 			function onDocumentMouseMove( event ) {
-			
+
+				mouseCoordinatesHadler( event );
+
+				const intersects = intersect_fn( );
 			}
 
 			function onDrawMouseMove( event ) {
 
 				mouseCoordinatesHadler( event );
-				
-				//event.preventDefault();
-				
-				//mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
-				
-				raycaster.setFromCamera( mouse, camera );
-				
-				const intersects = raycaster.intersectObjects( objects );
-				
+
+				const intersects = intersect_fn( );
+
 				if ( intersects.length > 0 ) {
-					
-					const intersect = intersects[ 0 ];
-					
-					//rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal );
-					//rollOverMesh.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
-					
+					intersect = intersects[ 0 ];
 					f3dStroke.push(intersects[0].point);
 					line.geometry.setDrawRange( 0, f3dStroke.length );
 					updatePositions();
-					line.geometry.attributes.position.needsUpdate = true;
+					line.geometry.attributes.position.needsUpdate = true; // required after the first render
+					render()
+				}else{
+					render()
 				}
 				
-				render();
-				
 			}
+
+			//wrap function to override dinamically onDocumentMouseUp
+			function toOverrideMouseUp( event ){
+				onDocumentMouseUp( event );
+			}
+
+			function onDefaultMouseUp( event ) {
+			}
+
 			function onDocumentMouseUp( event ) {
 			}
+
 			function onDrawMouseUp( event ) {
-				document.removeEventListener( 'mousemove', onDrawMouseMove );
+				onDocumentMouseMove = onDefaultMouseMove;
 				//draw and not edit
 				if(f3dStroke.length > 0){
 					var stroke2d = simplify(f3dStroke,1,true) 
@@ -375,7 +430,7 @@
 					window.actionsStack.addAction('ADDSPHERE',indexPickedObject);
 				}
 					
-				//intersects = {};
+				intersect = {};
 				
 				showBBox(f3dWorld[+indexPickedBody][+indexPickedChain][+(indexPickedObject)].sphere);
 				interpolate_group.children.length = 0;
@@ -386,59 +441,60 @@
 				render();
 			}
 			
-
-			function mouseCoordinatesHadler(e){
-
-				e.preventDefault();
-
-				mouse.set( ( e.clientX / window.innerWidth ) * 2 - 1, - ( e.clientY / window.innerHeight ) * 2 + 1 );
-				
+			//wrap function to override dinamically onDocumentMouseDown
+			function toOverrideMouseDown( event ){
+				onDocumentMouseDown( event );
 			}
+
+			function onDefaultMouseDown( event ) {
+			}
+
 			function onDocumentMouseDown( event ) {
 			}
+
 			function onDrawMouseDown( event ) {
 				
-
-				//event.preventDefault();
-
-				//mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
-				
-				document.addEventListener( 'mousemove', onDrawMouseMove, false );
+				onDocumentMouseMove = onDrawMouseMove;
 
 				mouseCoordinatesHadler( event );
 
-				raycaster.setFromCamera( mouse, camera );
-
-				const intersects = raycaster.intersectObjects( objects );
+				const intersects = intersect_fn( );
 
 				if ( intersects.length > 0 ) {
 
-					const intersect = intersects[ 0 ];
-
-					// delete cube
-
-					if ( isShiftDown ) {
-						//add key callback
-						if ( intersect.object !== plane ) {
-
-							//scene.remove( intersect.object );
-
-							//objects.splice( objects.indexOf( intersect.object ), 1 );
-
-						}
-
-						// create cube
-
-					} else {
-
-						//const voxel = new THREE.Mesh( cubeGeo, cubeMaterial );
-						//voxel.position.copy( intersect.point ).add( intersect.face.normal );
-						//voxel.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
-						//scene.add( voxel );
-
-						//objects.push( voxel );
-
+					if(intersects[ 0 ].object.name.indexOf('f3d_sphere_') !== -1){
+						//this.controls.enabled = false;
+						let sphereTokens = intersects[ 0 ].object.name.split('_');
+						let index_f3d_sphere = parseInt(sphereTokens[2]);
+						let index_body = parseInt(sphereTokens[3]);
+						let index_chain = parseInt(sphereTokens[4]);
+						indexPickedObject = index_f3d_sphere;
+						indexPickedBody = index_body;
+						indexPickedChain = index_chain;
+						startFreeHandDrawScale = intersects[ 0 ].object.scale.x;
+						setSelect(true);
+					}else if(intersects[ 0 ].object.name.indexOf('interpolation_') !== -1){
+						let interpolation_tokens = intersects[ 0 ].object.name.split('_');
+						let token_objId1 = interpolation_tokens[1];
+						let token_objId2 = interpolation_tokens[2];
+						let token_body = interpolation_tokens[3];
+						let token_chain = interpolation_tokens[4];
+						let firstRing = f3dWorld[token_body][token_chain][+token_objId1];
+						createSphere(0xffff00,SPHERESCALE);
+						let index_to_replace = firstRing.head.indexOf(parseInt(token_objId2));
+						let ring = {back:null,head:[firstRing.head[index_to_replace]],sphere:voxel};
+						firstRing.head[index_to_replace] = spheresNumber;
+						f3dWorld[token_body][token_chain][+(spheresNumber)] = ring;
+						indexPickedObject = spheresNumber;
+						indexPickedBody = token_body;
+						indexPickedChain = token_chain;
+						this.setSelect(true);
+						addSphereToScene(intersects[0]);
+					}else if(intersects[ 0 ].object.name.indexOf('wp') !== -1){
+						intersect = intersects[ 0 ];
+						setSelect(false);
 					}
+					
 
 					render();
 
