@@ -19,3 +19,7 @@ https://stackoverflow.com/questions/39126429/electron-splashscreen-on-startup-ap
 standardjs
 
 https://standardjs.com/
+
+NW instead of electronjs ?
+
+https://github.com/nwjs/nw.js
