@@ -15,3 +15,7 @@ ToDo:
 splash
 
 https://stackoverflow.com/questions/39126429/electron-splashscreen-on-startup-application
+
+standardjs
+
+https://standardjs.com/
