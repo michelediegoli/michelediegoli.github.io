@@ -32,6 +32,9 @@
 
 			//import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r122/three.min.js';
 			//import { OrbitControls } from './Utils/js/mod/OrbitControls.js';	
+			import { simplify } from  './Utils/js/mod/simplify-3d.js';
+			import { actionsStack } from './node_modules/action-stack/index.mjs'
+			window.actionsStack = new actionsStack();
 			let camera, scene, renderer, controls;
 			let plane;
 			let mouse, raycaster, isShiftDown = false;
@@ -39,8 +42,16 @@
 			let rollOverMesh, rollOverMaterial;
 			//let cubeGeo, cubeMaterial;
 			
-			let geometry, BufferGeometry, MAX_POINTS, positions, material, line, f3dStroke = [];
-
+			let geometry, BufferGeometry, MAX_POINTS = 500, SPHERESCALE = 1, positions, material, line, f3dStroke = [],lastSphere = {};
+			let startFreeHandDrawScale = 10, endFreeHandDrawScale = 0.1;
+			let spheresNumber = 0, chainsNumber = 0, bodyNumber = 0, f3dWorld = {}, oldX, oldY, boxHelper, select, group, interpolate_group, ch_group, indexPickedObject, indexPickedBody, indexPickedChain, distanceFactor = 10;
+			let intersect = {}, intersectedObject = {}, intersectedObjectOld = {};
+			//todo: change to array
+			f3dWorld[+bodyNumber] = {};
+			f3dWorld[+bodyNumber][+chainsNumber] = {};
+			f3dWorld[+bodyNumber][+chainsNumber][+spheresNumber] = {};
+			
+		
 			const objects = [];
 
 			init();
@@ -81,6 +92,7 @@
 				
 
 				plane = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { visible: false } ) );
+				plane.name = 'wp';
 				scene.add( plane );
 
 				objects.push( plane );
@@ -103,9 +115,9 @@
 				//controls.enabled = false;
 
 				//draw events
-				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
-				document.addEventListener( 'mousedown', onDocumentMouseDown, false );
-				document.addEventListener( 'mouseup', onDocumentMouseUp, false );
+				document.addEventListener( 'mousemove', toOverrideMouseMove, false );
+				document.addEventListener( 'mousedown', toOverrideMouseDown, false );
+				document.addEventListener( 'mouseup', toOverrideMouseUp, false );
 				document.addEventListener( 'keydown', onDocumentKeyDown, false );
 				document.addEventListener( 'keyup', onDocumentKeyUp, false );
 				//
@@ -128,11 +140,81 @@
 				// line
 				line = new THREE.Line( BufferGeometry,  material );
 				scene.add( line );
+
+				group = new THREE.Group();
+				interpolate_group = new THREE.Group();
+				ch_group = new THREE.Group();
+				scene.add(group);
+				scene.add(interpolate_group);
+				scene.add(ch_group);
+				
+			}
+			
+			document.DrawCB = function(){
+				onDocumentMouseDown = onDrawMouseDown;
+				onDocumentMouseUp = onDrawMouseUp;
+				intersect_fn = draw_intersect_fn;
+			}
+			
+			function mouseCoordinatesHadler(e){
+
+				e.preventDefault();
+
+				mouse.set( ( e.clientX / window.innerWidth ) * 2 - 1, - ( e.clientY / window.innerHeight ) * 2 + 1 );
+				
 			}
 
-			document.DrawCB = function(){
-				document.addEventListener( 'mousedown', onDrawMouseDown, false );
-				document.addEventListener( 'mouseup', onDrawMouseUp, false );
+			function default_intersect_fn(x,y){
+				return [];
+			}
+
+			function intersect_fn(x,y){
+				return [];
+			}
+
+			function draw_intersect_fn(){
+				//mouse.set( ( x / window.innerWidth ) * 2 - 1, - ( y / window.innerHeight ) * 2 + 1 );
+				raycaster.setFromCamera( mouse, camera );
+				intersectedObject = raycaster.intersectObjects( scene.children, true );
+				if ( intersectedObject.length > 0 ) {
+					//'material' in this.intersectedObjectOld
+					if ( intersectedObjectOld.hasOwnProperty('material') && (intersectedObjectOld != intersectedObject[ 0 ].object) ) {
+
+						if ( intersectedObjectOld.material ) intersectedObjectOld.material.color.setHex( intersectedObjectOld.currentHex );
+
+						intersectedObjectOld = intersectedObject[ 0 ].object;
+						
+						if(intersectedObjectOld.name.indexOf('f3d_sphere_') !== -1){
+							//this.controls.enabled = false;
+							let sphereTokens = intersectedObjectOld.name.split('_');
+							let index_f3d_sphere = parseInt(sphereTokens[2]);
+							let index_body = parseInt(sphereTokens[3]);
+							let index_chain = parseInt(sphereTokens[4]);
+							indexPickedObject = index_f3d_sphere;
+							indexPickedBody = index_body;
+							indexPickedChain = index_chain;
+							startFreeHandDrawScale = intersectedObjectOld.scale.x;
+							setSelect(true);
+						}else if(intersectedObjectOld.name.indexOf('wp') !== -1){
+							intersect = intersectedObjectOld;
+							setSelect(false);
+						}
+						intersectedObjectOld.currentHex = intersectedObjectOld.material.color.getHex();
+						intersectedObjectOld.material.color.setHex( 0xffffff );
+
+					}else{
+						intersectedObjectOld = intersectedObject[ 0 ].object;
+					}
+
+					return intersectedObject;
+				} else {
+
+					if ( intersectedObjectOld.hasOwnProperty('material') ) intersectedObjectOld.material.color.setHex( intersectedObjectOld.currentHex );
+
+					intersectedObjectOld = null;
+					return [];
+
+				}
 			}
 
 
@@ -157,107 +239,271 @@
 					positions[ index ++ ] = f3dStroke[i].y;
 					positions[ index ++ ] = f3dStroke[i].z;
 
-
+					
 				}
 			}
-		
-			function resetPosition(){
-
-				line.geometry.setDrawRange( 0, 0 );
-
-			}
-			function onDocumentMouseMove( event ) {
 			
+			function resetPosition(){
+				
+				line.geometry.setDrawRange( 0, 0 );
+				
+			}
+			
+			function createSphere(color,scale){
+				var geometry = new THREE.SphereGeometry( 5, 8, 8 );
+				var material = new THREE.MeshLambertMaterial( {color: color} );
+				lastSphere = new THREE.Mesh( geometry, material );
+				lastSphere.scale.x = scale;
+				lastSphere.scale.y = scale;
+				lastSphere.scale.z = scale;
+			}
+
+			function addSphereToScene (intersect){
+				lastSphere.name = 'f3d_sphere_' + spheresNumber + '_' + bodyNumber + '_' + chainsNumber;
+				setOldCoord(intersect.point.x,intersect.point.z);
+				//me.setLastSphereCenter(intersect.point.x,intersect.point.z);
+				lastSphere.position.copy( intersect.point )//.add( intersect.face.normal );
+				lastSphere.updateMatrixWorld();
+				group.add( lastSphere );
+				spheresNumber += 1;
+			}
+			
+			function setOldCoord(x,y){
+				oldX = x;
+				oldY = y;
+			}
+
+			function addNextRing(voxel){
+				let ring = {};
+				if(spheresNumber == 1){
+					ring = {back:null,head:[],sphere:voxel};
+					f3dWorld[+bodyNumber][+chainsNumber][+(spheresNumber-1)] = ring;
+				}else{
+					ring = {back:indexPickedObject,head:[],sphere:voxel};
+					f3dWorld[+indexPickedBody][+indexPickedChain][+(spheresNumber-1)] = ring;
+					if(f3dWorld[+indexPickedBody][+indexPickedChain][+(indexPickedObject)].head.length == 0) f3dWorld[+indexPickedBody][+indexPickedChain][+(indexPickedObject)].head = [spheresNumber-1];
+					else f3dWorld[+indexPickedBody][+indexPickedChain][+(indexPickedObject)].head.push(spheresNumber-1);
+				}	
+			}
+
+			function showBBox(voxel){
+				if(!boxHelper){
+					boxHelper = new THREE.BoxHelper( voxel, 0xffff00 );
+					scene.add(boxHelper);
+				}
+				else{
+					boxHelper.setFromObject(voxel);
+				}
+			}
+
+			function setSelect(bool){
+				select = bool;
+			}
+
+			function interpolateSpheres(){
+				let curvePoints = [];	
+				let curveScales = [];				
+				for(let b = 0,b_l = Object.keys(f3dWorld).length;b<b_l;b++){
+					for(let c = 0,c_l = Object.keys(f3dWorld[+b]).length;c<c_l;c++){
+						for(let s = 0,s_l = Object.keys(f3dWorld[+b][+c]).length;s<s_l;s++){
+							let st = f3dWorld[+b][+c][+s];
+							if(st.head && st.head.length>0){
+								let s1 = st.sphere;
+								for(let h = 0,h_l = st.head.length;h<h_l;h++){
+									let s2 = f3dWorld[+b][+c][+st.head[h]].sphere;
+									r_interpolate2Spheres(s1,s2,s,st.head[h]);
+								}
+							}
+						}
+					}
+				}
+			}
+
+			function r_interpolate2Spheres(s1,s2,i,ii){
+				let x_diff = (s1.position.x - s2.position.x);
+				let y_diff = (s1.position.y - s2.position.y);
+				let z_diff = (s1.position.z - s2.position.z);
+				let scale_x_diff = (s1.scale.x - s2.scale.x);
+				let scale_y_diff = (s1.scale.y - s2.scale.y);
+				let scale_z_diff = (s1.scale.z - s2.scale.z);
+				let token_position_x,token_position_y,token_position_z, token_scale_x,token_scale_y,token_scale_z;
+				let distance = Math.sqrt(x_diff * x_diff + y_diff * y_diff + z_diff * z_diff);
+				let numberOfTokens;
+				numberOfTokens = 2;
+				token_position_x = x_diff/numberOfTokens;
+				token_position_y = y_diff/numberOfTokens;
+				token_position_z = z_diff/numberOfTokens;
+				token_scale_x = scale_x_diff/numberOfTokens;
+				token_scale_y = scale_y_diff/numberOfTokens;
+				token_scale_z = scale_z_diff/numberOfTokens;
+				createSphere(0xff0000);
+				lastSphere.position.x = s1.position.x - token_position_x;
+				lastSphere.position.y = s1.position.y - token_position_y;
+				lastSphere.position.z = s1.position.z - token_position_z;
+				lastSphere.scale.x = s1.scale.x - token_scale_x;
+				lastSphere.scale.y = s1.scale.y - token_scale_y;
+				lastSphere.scale.z = s1.scale.z - token_scale_z;
+				lastSphere.name = 'interpolation_'+i+'_'+ ii + '_' + bodyNumber + '_' + chainsNumber;
+				interpolate_group.add( lastSphere );
+				if((distance > (s1.scale.x*distanceFactor)) || (distance > (s2.scale.x*distanceFactor))){
+					r_interpolate2Spheres(s1,lastSphere,i,ii);
+					r_interpolate2Spheres(lastSphere,s2,i,ii);
+					
+				}
+			}
+			//wrap function to override dinamically onDocumentMouseMove
+			function toOverrideMouseMove( event ){
+				onDocumentMouseMove( event );
+			}
+
+			function onDefaultMouseMove( event ) {
+				
+				mouseCoordinatesHadler( event );
+
+				const intersects = intersect_fn( );
+			}
+
+			function onDocumentMouseMove( event ) {
+
+				mouseCoordinatesHadler( event );
+
+				const intersects = intersect_fn( );
 			}
 
 			function onDrawMouseMove( event ) {
 
 				mouseCoordinatesHadler( event );
-				
-				//event.preventDefault();
-				
-				//mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
-				
-				raycaster.setFromCamera( mouse, camera );
-				
-				const intersects = raycaster.intersectObjects( objects );
-				
+
+				const intersects = intersect_fn( );
+
 				if ( intersects.length > 0 ) {
-					
-					const intersect = intersects[ 0 ];
-					
-					//rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal );
-					//rollOverMesh.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
-					
+					intersect = intersects[ 0 ];
 					f3dStroke.push(intersects[0].point);
 					line.geometry.setDrawRange( 0, f3dStroke.length );
 					updatePositions();
-					line.geometry.attributes.position.needsUpdate = true;
+					line.geometry.attributes.position.needsUpdate = true; // required after the first render
+					render()
+				}else{
+					render()
 				}
 				
-				render();
-				
 			}
+
+			//wrap function to override dinamically onDocumentMouseUp
+			function toOverrideMouseUp( event ){
+				onDocumentMouseUp( event );
+			}
+
+			function onDefaultMouseUp( event ) {
+			}
+
 			function onDocumentMouseUp( event ) {
 			}
+
 			function onDrawMouseUp( event ) {
-				f3dStroke.length = 0;
-				document.removeEventListener( 'mousemove', onDrawMouseMove );
+				onDocumentMouseMove = onDefaultMouseMove;
+				//draw and not edit
+				if(f3dStroke.length > 0){
+					var stroke2d = simplify(f3dStroke,1,true) 
+					var stroke2dLength = stroke2d.length;
+					var freeHandDrawScaleStep = (startFreeHandDrawScale - endFreeHandDrawScale)/stroke2dLength;
+					stroke2d.forEach((e,i,a) => {
+						createSphere(0xffff00,SPHERESCALE);
+						addSphereToScene({point:e});
+						lastSphere.scale.x = startFreeHandDrawScale - (freeHandDrawScaleStep*i)
+						lastSphere.scale.y = startFreeHandDrawScale - (freeHandDrawScaleStep*i)
+						lastSphere.scale.z = startFreeHandDrawScale - (freeHandDrawScaleStep*i)
+						addNextRing(lastSphere);
+						indexPickedBody = bodyNumber;
+						indexPickedChain = chainsNumber;
+						indexPickedObject = spheresNumber-1;
+						window.actionsStack.addAction('ADDSPHERE',indexPickedObject);
+					})
+					f3dStroke.length = 0;
+					resetPosition();
+				}else{
+					createSphere(0xffff00,SPHERESCALE);
+					addSphereToScene(intersect);
+					addNextRing(lastSphere);
+					indexPickedBody = bodyNumber;
+					indexPickedChain = chainsNumber;
+					indexPickedObject = spheresNumber-1;
+					window.actionsStack.addAction('ADDSPHERE',indexPickedObject);
+				}
+					
+				intersect = {};
+				
+				showBBox(f3dWorld[+indexPickedBody][+indexPickedChain][+(indexPickedObject)].sphere);
+				interpolate_group.children.length = 0;
+				ch_group.children.length = 0;
+				setSelect(false);
+				//this.setDraw();		
+				interpolateSpheres();
+				render();
 			}
 			
-
-			function mouseCoordinatesHadler(e){
-
-				e.preventDefault();
-
-				mouse.set( ( e.clientX / window.innerWidth ) * 2 - 1, - ( e.clientY / window.innerHeight ) * 2 + 1 );
-				
+			//wrap function to override dinamically onDocumentMouseDown
+			function toOverrideMouseDown( event ){
+				onDocumentMouseDown( event );
 			}
+
+			function onDefaultMouseDown( event ) {
+			}
+
 			function onDocumentMouseDown( event ) {
 			}
+
 			function onDrawMouseDown( event ) {
 				
-
-				//event.preventDefault();
-
-				//mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
-				
-				document.addEventListener( 'mousemove', onDrawMouseMove, false );
+				onDocumentMouseMove = onDrawMouseMove;
 
 				mouseCoordinatesHadler( event );
 
-				raycaster.setFromCamera( mouse, camera );
-
-				const intersects = raycaster.intersectObjects( objects );
+				const intersects = intersect_fn( );
 
 				if ( intersects.length > 0 ) {
 
-					const intersect = intersects[ 0 ];
-
-					// delete cube
-
-					if ( isShiftDown ) {
-						//add key callback
-						if ( intersect.object !== plane ) {
-
-							//scene.remove( intersect.object );
-
-							//objects.splice( objects.indexOf( intersect.object ), 1 );
-
+					if(intersects[ 0 ].object.name.indexOf('f3d_sphere_') !== -1){
+						//this.controls.enabled = false;
+						let sphereTokens = intersects[ 0 ].object.name.split('_');
+						let index_f3d_sphere = parseInt(sphereTokens[2]);
+						let index_body = parseInt(sphereTokens[3]);
+						let index_chain = parseInt(sphereTokens[4]);
+						indexPickedObject = index_f3d_sphere;
+						indexPickedBody = index_body;
+						indexPickedChain = index_chain;
+						startFreeHandDrawScale = intersects[ 0 ].object.scale.x;
+						setSelect(true);
+					}else if(intersects[ 0 ].object.name.indexOf('interpolation_') !== -1){
+						let interpolation_tokens = intersects[ 0 ].object.name.split('_');
+						let token_objId1 = interpolation_tokens[1];
+						let token_objId2 = interpolation_tokens[2];
+						let token_body = interpolation_tokens[3];
+						let token_chain = interpolation_tokens[4];
+						let firstRing = f3dWorld[token_body][token_chain][+token_objId1];
+						createSphere(0xffff00,SPHERESCALE);
+						let index_to_replace = firstRing.head.indexOf(parseInt(token_objId2));
+						let ring = {back:null,head:[firstRing.head[index_to_replace]],sphere:voxel};
+						firstRing.head[index_to_replace] = spheresNumber;
+						f3dWorld[token_body][token_chain][+(spheresNumber)] = ring;
+						indexPickedObject = spheresNumber;
+						indexPickedBody = token_body;
+						indexPickedChain = token_chain;
+						this.setSelect(true);
+						addSphereToScene(intersects[0]);
+					}else if(intersects[ 0 ].object.name.indexOf('wp') !== -1){
+						intersect = intersects[ 0 ];
+						//to be the first chain I need to have spheres: an empty object has length 1
+						if( (chainsNumber == 0 && Object.keys( f3dWorld[+bodyNumber][+chainsNumber] ).length > 1 ) || chainsNumber > 0 ){
+							chainsNumber++;
+							spheresNumber = 0;
+							indexPickedChain = chainsNumber;
+							f3dWorld[+bodyNumber][+chainsNumber] = {};
+							f3dWorld[+bodyNumber][+chainsNumber][+spheresNumber] = {};//ugly ugly! I leave empty space at the start of a new chains on a new chain!
 						}
-
-						// create cube
-
-					} else {
-
-						//const voxel = new THREE.Mesh( cubeGeo, cubeMaterial );
-						//voxel.position.copy( intersect.point ).add( intersect.face.normal );
-						//voxel.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
-						//scene.add( voxel );
-
-						//objects.push( voxel );
-
+						setSelect(false);
 					}
+					
 
 					render();
 
