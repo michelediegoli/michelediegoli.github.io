@@ -92,6 +92,7 @@
 				
 
 				plane = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { visible: false } ) );
+				plane.name = 'wp';
 				scene.add( plane );
 
 				objects.push( plane );
@@ -492,6 +493,14 @@
 						addSphereToScene(intersects[0]);
 					}else if(intersects[ 0 ].object.name.indexOf('wp') !== -1){
 						intersect = intersects[ 0 ];
+						//to be the first chain I need to have spheres: an empty object has length 1
+						if( (chainsNumber == 0 && Object.keys( f3dWorld[+bodyNumber][+chainsNumber] ).length > 1 ) || chainsNumber > 0 ){
+							chainsNumber++;
+							spheresNumber = 0;
+							indexPickedChain = chainsNumber;
+							f3dWorld[+bodyNumber][+chainsNumber] = {};
+							f3dWorld[+bodyNumber][+chainsNumber][+spheresNumber] = {};//ugly ugly! I leave empty space at the start of a new chains on a new chain!
+						}
 						setSelect(false);
 					}
 					
