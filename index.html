@@ -153,7 +153,7 @@
 			document.DrawCB = function(){
 				onDocumentMouseDown = onDrawMouseDown;
 				onDocumentMouseUp = onDrawMouseUp;
-				intersect_fn = draw_intersect_fn;
+				tool_intersect_fn = draw_intersect_fn;
 			}
 			
 			function mouseCoordinatesHadler(e){
@@ -165,10 +165,42 @@
 			}
 
 			function default_intersect_fn(x,y){
-				return [];
+				//mouse.set( ( x / window.innerWidth ) * 2 - 1, - ( y / window.innerHeight ) * 2 + 1 );
+				raycaster.setFromCamera( mouse, camera );
+				intersectedObject = raycaster.intersectObjects( scene.children, true );
+				if ( intersectedObject.length > 0 ) {
+					//'material' in this.intersectedObjectOld
+					if ( intersectedObjectOld.hasOwnProperty('material') && (intersectedObjectOld != intersectedObject[ 0 ].object) ) {
+
+						if ( intersectedObjectOld.material ) intersectedObjectOld.material.color.setHex( intersectedObjectOld.currentHex );
+
+						intersectedObjectOld = intersectedObject[ 0 ].object;
+						
+						
+						intersectedObjectOld.currentHex = intersectedObjectOld.material.color.getHex();
+						intersectedObjectOld.material.color.setHex( 0xffffff );
+
+					}else{
+						intersectedObjectOld = intersectedObject[ 0 ].object;
+					}
+
+					return intersectedObject;
+				} else {
+
+					if ( intersectedObjectOld.hasOwnProperty('material') ) intersectedObjectOld.material.color.setHex( intersectedObjectOld.currentHex );
+
+					intersectedObjectOld = null;
+					return [];
+
+				}			
 			}
 
 			function intersect_fn(x,y){
+				return [];
+			}
+
+			//when you select a tool, this function is setted with a pointer to relative tool's intersect function (tool draw -> draw_intersect_fn). MouseDown sets as intersects_fn the value of tool_intersect_fn, onmouseup intersect_fn is setted with the pointer of default_intersect_fn
+			function tool_intersect_fn(){
 				return [];
 			}
 
@@ -401,6 +433,7 @@
 			}
 
 			function onDrawMouseUp( event ) {
+				intersect_fn = default_intersect_fn;
 				onDocumentMouseMove = onDefaultMouseMove;
 				//draw and not edit
 				if(f3dStroke.length > 0){
@@ -456,6 +489,8 @@
 			function onDrawMouseDown( event ) {
 				
 				onDocumentMouseMove = onDrawMouseMove;
+
+				intersect_fn = tool_intersect_fn;
 
 				mouseCoordinatesHadler( event );
 
