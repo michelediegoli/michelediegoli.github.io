@@ -21,5 +21,5 @@ var actionsStack = class{
 		else return null;
 	}
 }
-
+//fix actions stack npm module
 export default actionsStack;
